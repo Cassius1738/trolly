@@ -5,6 +5,8 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 --------------------------------------------------
 --// GLOBAL SETTINGS
@@ -16,8 +18,14 @@ _G.FlySpeed = 50
 -- Sky Troll
 _G.SkyPower = 280
 _G.SkyDuration = 4
-_G.SkyImageId = "rbxassetid://114323106618826" -- replace with your image
-_G.SkySoundId = "rbxassetid://131178265362779" -- replace with your sound
+_G.SkyImageId = "rbxassetid://114323106618826" -- image over player
+_G.SkySoundId = "rbxassetid://131178265362779" -- sound over player
+
+-- Sky Jumpscare (global)
+_G.JumpscareImageId = "rbxassetid://114323106618826" -- floating in sky
+_G.JumpscareSoundId = "rbxassetid://131178265362779"
+_G.JumpscareDuration = 5
+_G.JumpscareHeight = 50
 
 --------------------------------------------------
 --// SAFE GUI
@@ -38,8 +46,8 @@ UI.ResetOnSpawn = false
 UI.Parent = safe_gethui()
 
 local Main = Instance.new("Frame", UI)
-Main.Size = UDim2.new(0,400,0,360)
-Main.Position = UDim2.new(0.3,0,0.25,0)
+Main.Size = UDim2.new(0,400,0,400)
+Main.Position = UDim2.new(0.3,0,0.2,0)
 Main.BackgroundColor3 = Color3.fromRGB(18,18,18)
 Main.Active = true
 Main.Draggable = true
@@ -107,19 +115,6 @@ Tab("Sky Troll",SkyPage)
 --------------------------------------------------
 --// HELPER FUNCTIONS
 --------------------------------------------------
-local function Btn(parent,text,cb)
-	local b = Instance.new("TextButton", parent)
-	b.Size = UDim2.new(1,0,0,34)
-	b.BackgroundColor3 = Color3.fromRGB(35,35,35)
-	b.TextColor3 = Color3.new(1,1,1)
-	b.Font = Enum.Font.Gotham
-	b.TextSize = 13
-	b.Text = text
-	Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
-	b.MouseButton1Click:Connect(cb)
-	return b
-end
-
 local function CircleToggle(parent,text,flag)
 	local holder = Instance.new("Frame", parent)
 	holder.Size = UDim2.new(1,0,0,32)
@@ -148,12 +143,6 @@ local function CircleToggle(parent,text,flag)
 	end)
 end
 
---------------------------------------------------
---// MOVEMENT PAGE
---------------------------------------------------
-CircleToggle(MovementPage,"Noclip + Fly","NoclipFlyEnabled")
-
--- Fly Speed Slider
 local function FlySpeedSlider(parent)
 	local holder = Instance.new("Frame", parent)
 	holder.Size = UDim2.new(1,0,0,40)
@@ -204,88 +193,33 @@ local function FlySpeedSlider(parent)
 	holder.Parent = parent
 end
 
+--------------------------------------------------
+--// MOVEMENT PAGE
+--------------------------------------------------
+CircleToggle(MovementPage,"Noclip + Fly","NoclipFlyEnabled")
 FlySpeedSlider(MovementPage)
 
---------------------------------------------------
---// SKY TROLL PAGE
---------------------------------------------------
-local SkyList = Instance.new("ScrollingFrame", SkyPage)
-SkyList.Size = UDim2.new(1,0,1,0)
-SkyList.Position = UDim2.new(0,0,0,0)
-SkyList.BackgroundColor3 = Color3.fromRGB(25,25,25)
-SkyList.BorderSizePixel = 0
-SkyList.CanvasSize = UDim2.new(0,0,0,0)
-SkyList.ScrollBarThickness = 8
-Instance.new("UICorner", SkyList).CornerRadius = UDim.new(0,8)
+-- Player List with Teleport & Bring
+local PlayerList = Instance.new("ScrollingFrame", MovementPage)
+PlayerList.Size = UDim2.new(1,0,0,200)
+PlayerList.Position = UDim2.new(0,0,0,140)
+PlayerList.BackgroundColor3 = Color3.fromRGB(25,25,25)
+PlayerList.BorderSizePixel = 0
+PlayerList.CanvasSize = UDim2.new(0,0,0,0)
+PlayerList.ScrollBarThickness = 8
+Instance.new("UICorner", PlayerList).CornerRadius = UDim.new(0,8)
 
-local SkyLayout = Instance.new("UIListLayout", SkyList)
-SkyLayout.Padding = UDim.new(0,4)
-SkyLayout.SortOrder = Enum.SortOrder.LayoutOrder
+local PlayerLayout = Instance.new("UIListLayout", PlayerList)
+PlayerLayout.Padding = UDim.new(0,4)
+PlayerLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- GLOBAL Sky Troll
-local SkyDebounce = {}
-local function GlobalSkyTroll(player)
-	if SkyDebounce[player] then return end
-	SkyDebounce[player] = true
+local function CreatePlayerButtons(player)
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(1,0,0,28)
+	frame.BackgroundTransparency = 1
 
-	if not player.Character then return end
-	local char = player.Character
-	local hrp = char:FindFirstChild("HumanoidRootPart")
-	if not hrp then return end
-
-	-- Launch
-	local bv = Instance.new("BodyVelocity")
-	bv.Name = "SkyLaunchVelocity"
-	bv.MaxForce = Vector3.new(0,1e5,0)
-	bv.Velocity = Vector3.new(0,_G.SkyPower,0)
-	bv.Parent = hrp
-
-	-- Global Billboard / Image
-	local skyPart = Instance.new("Part")
-	skyPart.Size = Vector3.new(6,6,1)
-	skyPart.Anchored = true
-	skyPart.CanCollide = false
-	skyPart.Position = hrp.Position + Vector3.new(0,7,0)
-	skyPart.Parent = workspace
-
-	local billboard = Instance.new("BillboardGui", skyPart)
-	billboard.Size = UDim2.new(1,0,1,0)
-	billboard.AlwaysOnTop = true
-	local img = Instance.new("ImageLabel", billboard)
-	img.Size = UDim2.new(1,0,1,0)
-	img.BackgroundTransparency = 1
-	img.Image = _G.SkyImageId
-
-	-- Global Sound
-	local soundPart = Instance.new("Part")
-	soundPart.Size = Vector3.new(1,1,1)
-	soundPart.Anchored = true
-	soundPart.CanCollide = false
-	soundPart.Position = hrp.Position
-	soundPart.Parent = workspace
-
-	local sound = Instance.new("Sound", soundPart)
-	sound.SoundId = _G.SkySoundId
-	sound.Volume = 10
-	sound:Play()
-
-	-- Cleanup
-	task.delay(_G.SkyDuration, function()
-		bv:Destroy()
-		skyPart:Destroy()
-		soundPart:Destroy()
-		SkyDebounce[player] = nil
-	end)
-end
-
--- Buttons for each player
-local function CreateSkyButton(player)
-	local holder = Instance.new("Frame")
-	holder.Size = UDim2.new(1,0,0,28)
-	holder.BackgroundTransparency = 1
-
-	local nameLabel = Instance.new("TextLabel", holder)
-	nameLabel.Size = UDim2.new(0.6,0,1,0)
+	local nameLabel = Instance.new("TextLabel", frame)
+	nameLabel.Size = UDim2.new(0.5,0,1,0)
 	nameLabel.Position = UDim2.new(0,5,0,0)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.Text = player.Name
@@ -294,82 +228,39 @@ local function CreateSkyButton(player)
 	nameLabel.TextSize = 13
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 
-	local skyBtn = Instance.new("TextButton", holder)
-	skyBtn.Size = UDim2.new(0.35,0,1,0)
-	skyBtn.Position = UDim2.new(0.62,0,0,0)
-	skyBtn.BackgroundColor3 = Color3.fromRGB(170,50,255)
-	skyBtn.Text = "SKY"
-	skyBtn.TextColor3 = Color3.new(1,1,1)
-	skyBtn.Font = Enum.Font.GothamBold
-	skyBtn.TextSize = 12
-	Instance.new("UICorner", skyBtn).CornerRadius = UDim.new(0,6)
-	skyBtn.MouseButton1Click:Connect(function()
-		GlobalSkyTroll(player)
+	local tpBtn = Instance.new("TextButton", frame)
+	tpBtn.Size = UDim2.new(0.22,0,1,0)
+	tpBtn.Position = UDim2.new(0.52,0,0,0)
+	tpBtn.BackgroundColor3 = Color3.fromRGB(35,35,35)
+	tpBtn.Text = "TP"
+	tpBtn.TextColor3 = Color3.new(1,1,1)
+	tpBtn.Font = Enum.Font.Gotham
+	tpBtn.TextSize = 12
+	Instance.new("UICorner", tpBtn).CornerRadius = UDim.new(0,6)
+	tpBtn.MouseButton1Click:Connect(function()
+		if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			LocalPlayer.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame + Vector3.new(0,3,0)
+		end
 	end)
 
-	holder.Parent = SkyList
-	SkyList.CanvasSize = UDim2.new(0,0,0,SkyLayout.AbsoluteContentSize.Y)
+	local bringBtn = Instance.new("TextButton", frame)
+	bringBtn.Size = UDim2.new(0.22,0,1,0)
+	bringBtn.Position = UDim2.new(0.76,0,0,0)
+	bringBtn.BackgroundColor3 = Color3.fromRGB(35,35,35)
+	bringBtn.Text = "Bring"
+	bringBtn.TextColor3 = Color3.new(1,1,1)
+	bringBtn.Font = Enum.Font.Gotham
+	bringBtn.TextSize = 12
+	Instance.new("UICorner", bringBtn).CornerRadius = UDim.new(0,6)
+	bringBtn.MouseButton1Click:Connect(function()
+		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			player.Character.HumanoidRootPart.CFrame = CFrame.new(0,5,0)
+		end
+	end)
+
+	frame.Parent = PlayerList
+	PlayerList.CanvasSize = UDim2.new(0,0,0,PlayerLayout.AbsoluteContentSize.Y)
 end
 
-for _,p in pairs(Players:GetPlayers()) do CreateSkyButton(p) end
-Players.PlayerAdded:Connect(CreateSkyButton)
-
---------------------------------------------------
---// SHOW / HIDE MENU
---------------------------------------------------
-UserInputService.InputBegan:Connect(function(i,gp)
-	if not gp and i.KeyCode == Enum.KeyCode.RightControl then
-		Main.Visible = not Main.Visible
-	end
-end)
-
---------------------------------------------------
---// Noclip + Fly Logic
---------------------------------------------------
-RunService.Stepped:Connect(function()
-	if _G.NoclipFlyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-		local hrp = LocalPlayer.Character.HumanoidRootPart
-
-		-- Noclip
-		for _,part in pairs(LocalPlayer.Character:GetDescendants()) do
-			if part:IsA("BasePart") then
-				part.CanCollide = false
-			end
-		end
-
-		-- Fly
-		if not hrp:FindFirstChild("FlyVelocity") then
-			local bv = Instance.new("BodyVelocity")
-			bv.Name = "FlyVelocity"
-			bv.MaxForce = Vector3.new(1e5,1e5,1e5)
-			bv.Velocity = Vector3.zero
-			bv.Parent = hrp
-		end
-
-		local moveDir = Vector3.new()
-		if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + hrp.CFrame.LookVector end
-		if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - hrp.CFrame.LookVector end
-		if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - hrp.CFrame.RightVector end
-		if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + hrp.CFrame.RightVector end
-		if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
-		if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0,1,0) end
-
-		if moveDir.Magnitude > 0 then
-			hrp.FlyVelocity.Velocity = moveDir.Unit * _G.FlySpeed
-		else
-			hrp.FlyVelocity.Velocity = Vector3.zero
-		end
-	else
-		if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-			local hrp = LocalPlayer.Character.HumanoidRootPart
-			if hrp:FindFirstChild("FlyVelocity") then
-				hrp.FlyVelocity:Destroy()
-			end
-			for _,part in pairs(LocalPlayer.Character:GetDescendants()) do
-				if part:IsA("BasePart") then
-					part.CanCollide = true
-				end
-			end
-		end
-	end
-end)
+for _,p in pairs(Players:GetPlayers()) do CreatePlayerButtons(p) end
+Players.PlayerAdded:Connect(CreatePlayerButtons)
