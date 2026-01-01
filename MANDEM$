@@ -5,13 +5,10 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
-local TweenService = game:GetService("TweenService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 --------------------------------------------------
 --// GLOBAL SETTINGS
 --------------------------------------------------
--- Movement
 _G.NoclipFlyEnabled = false
 _G.FlySpeed = 50
 
@@ -22,7 +19,7 @@ _G.SkyImageId = "rbxassetid://114323106618826" -- image over player
 _G.SkySoundId = "rbxassetid://131178265362779" -- sound over player
 
 -- Sky Jumpscare (global)
-_G.JumpscareImageId = "rbxassetid://114323106618826" -- floating in sky
+_G.JumpscareImageId = "rbxassetid://114323106618826"
 _G.JumpscareSoundId = "rbxassetid://131178265362779"
 _G.JumpscareDuration = 5
 _G.JumpscareHeight = 50
@@ -31,11 +28,7 @@ _G.JumpscareHeight = 50
 --// SAFE GUI
 --------------------------------------------------
 local function safe_gethui()
-	if LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui") then
-		return LocalPlayer.PlayerGui
-	else
-		return game:GetService("CoreGui")
-	end
+	return LocalPlayer:FindFirstChild("PlayerGui") or game:GetService("CoreGui")
 end
 
 --------------------------------------------------
@@ -93,7 +86,6 @@ local MovementPage = Page()
 local SkyPage = Page()
 MovementPage.Visible = true
 
--- Tab helper
 local function Tab(name,page)
 	local b = Instance.new("TextButton", Tabs)
 	b.Size = UDim2.new(0,120,0,32)
@@ -113,7 +105,7 @@ Tab("Movement",MovementPage)
 Tab("Sky Troll",SkyPage)
 
 --------------------------------------------------
---// HELPER FUNCTIONS
+--// MOVEMENT PAGE
 --------------------------------------------------
 local function CircleToggle(parent,text,flag)
 	local holder = Instance.new("Frame", parent)
@@ -141,6 +133,7 @@ local function CircleToggle(parent,text,flag)
 		btn.Text = _G[flag] and "●" or "○"
 		btn.TextColor3 = _G[flag] and Color3.fromRGB(0,255,120) or Color3.fromRGB(200,200,200)
 	end)
+	holder.Parent = parent
 end
 
 local function FlySpeedSlider(parent)
@@ -193,13 +186,10 @@ local function FlySpeedSlider(parent)
 	holder.Parent = parent
 end
 
---------------------------------------------------
---// MOVEMENT PAGE
---------------------------------------------------
 CircleToggle(MovementPage,"Noclip + Fly","NoclipFlyEnabled")
 FlySpeedSlider(MovementPage)
 
--- Player List with Teleport & Bring
+-- Player List with Teleport & Bring (already working)
 local PlayerList = Instance.new("ScrollingFrame", MovementPage)
 PlayerList.Size = UDim2.new(1,0,0,200)
 PlayerList.Position = UDim2.new(0,0,0,140)
@@ -208,7 +198,6 @@ PlayerList.BorderSizePixel = 0
 PlayerList.CanvasSize = UDim2.new(0,0,0,0)
 PlayerList.ScrollBarThickness = 8
 Instance.new("UICorner", PlayerList).CornerRadius = UDim.new(0,8)
-
 local PlayerLayout = Instance.new("UIListLayout", PlayerList)
 PlayerLayout.Padding = UDim.new(0,4)
 PlayerLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -264,3 +253,172 @@ end
 
 for _,p in pairs(Players:GetPlayers()) do CreatePlayerButtons(p) end
 Players.PlayerAdded:Connect(CreatePlayerButtons)
+
+--------------------------------------------------
+--// SKY TROLL PAGE
+--------------------------------------------------
+local SkyList = Instance.new("ScrollingFrame", SkyPage)
+SkyList.Size = UDim2.new(1,0,1,0)
+SkyList.BackgroundColor3 = Color3.fromRGB(25,25,25)
+SkyList.BorderSizePixel = 0
+SkyList.ScrollBarThickness = 8
+Instance.new("UICorner", SkyList).CornerRadius = UDim.new(0,8)
+local SkyLayout = Instance.new("UIListLayout", SkyList)
+SkyLayout.Padding = UDim.new(0,4)
+SkyLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- Sky over player
+local SkyDebounce = {}
+local function SkyTroll(player)
+	if SkyDebounce[player] then return end
+	SkyDebounce[player] = true
+	if not player.Character then return end
+	local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+	hrp.Velocity = Vector3.new(0,_G.SkyPower,0)
+
+	local billboard = Instance.new("BillboardGui", hrp)
+	billboard.Size = UDim2.new(8,0,8,0)
+	billboard.StudsOffset = Vector3.new(0,7,0)
+	billboard.AlwaysOnTop = true
+	billboard.Adornee = hrp
+	local img = Instance.new("ImageLabel", billboard)
+	img.Size = UDim2.new(1,0,1,0)
+	img.BackgroundTransparency = 1
+	img.Image = _G.SkyImageId
+
+	local sound = Instance.new("Sound", hrp)
+	sound.SoundId = _G.SkySoundId
+	sound.Volume = 10
+	sound:Play()
+
+	task.delay(_G.SkyDuration,function()
+		billboard:Destroy()
+		sound:Destroy()
+		SkyDebounce[player] = nil
+	end)
+end
+
+-- Global jumpscare button
+local function GlobalJumpscare()
+	local part = Instance.new("Part")
+	part.Size = Vector3.new(1,1,1)
+	part.Anchored = true
+	part.CanCollide = false
+	part.CFrame = CFrame.new(0,_G.JumpscareHeight,0)
+	part.Parent = workspace
+
+	local gui = Instance.new("BillboardGui", part)
+	gui.Size = UDim2.new(10,0,10,0)
+	gui.Adornee = part
+	gui.AlwaysOnTop = true
+	local img = Instance.new("ImageLabel", gui)
+	img.Size = UDim2.new(1,0,1,0)
+	img.BackgroundTransparency = 1
+	img.Image = _G.JumpscareImageId
+
+	local sound = Instance.new("Sound", part)
+	sound.SoundId = _G.JumpscareSoundId
+	sound.Volume = 10
+	sound:Play()
+
+	task.delay(_G.JumpscareDuration,function()
+		part:Destroy()
+	end)
+end
+
+-- Buttons
+for _,p in pairs(Players:GetPlayers()) do
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(1,0,0,28)
+	frame.BackgroundTransparency = 1
+
+	local label = Instance.new("TextLabel", frame)
+	label.Size = UDim2.new(0.6,0,1,0)
+	label.BackgroundTransparency = 1
+	label.Text = p.Name
+	label.TextColor3 = Color3.new(1,1,1)
+	label.Font = Enum.Font.Gotham
+	label.TextSize = 13
+	label.TextXAlignment = Enum.TextXAlignment.Left
+
+	local btn = Instance.new("TextButton", frame)
+	btn.Size = UDim2.new(0.35,0,1,0)
+	btn.Position = UDim2.new(0.62,0,0,0)
+	btn.BackgroundColor3 = Color3.fromRGB(170,50,255)
+	btn.Text = "SKY"
+	btn.TextColor3 = Color3.new(1,1,1)
+	btn.Font = Enum.Font.GothamBold
+	btn.TextSize = 12
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
+	btn.MouseButton1Click:Connect(function() SkyTroll(p) end)
+
+	frame.Parent = SkyList
+	SkyList.CanvasSize = UDim2.new(0,0,0,SkyLayout.AbsoluteContentSize.Y)
+end
+
+-- Global jumpscare button
+local globalFrame = Instance.new("Frame")
+globalFrame.Size = UDim2.new(1,0,0,28)
+globalFrame.BackgroundTransparency = 1
+local globalBtn = Instance.new("TextButton", globalFrame)
+globalBtn.Size = UDim2.new(1,0,1,0)
+globalBtn.BackgroundColor3 = Color3.fromRGB(255,0,0)
+globalBtn.Text = "GLOBAL JUMPSCARE"
+globalBtn.Font = Enum.Font.GothamBold
+globalBtn.TextColor3 = Color3.new(1,1,1)
+globalBtn.TextSize = 14
+Instance.new("UICorner", globalBtn).CornerRadius = UDim.new(0,6)
+globalBtn.MouseButton1Click:Connect(GlobalJumpscare)
+globalFrame.Parent = SkyList
+SkyList.CanvasSize = UDim2.new(0,0,0,SkyLayout.AbsoluteContentSize.Y)
+
+--------------------------------------------------
+--// SHOW / HIDE MENU
+--------------------------------------------------
+UserInputService.InputBegan:Connect(function(input,gp)
+	if not gp and input.KeyCode == Enum.KeyCode.RightControl then
+		Main.Visible = not Main.Visible
+	end
+end)
+
+--------------------------------------------------
+--// Noclip + Fly Logic
+--------------------------------------------------
+RunService.Stepped:Connect(function()
+	if _G.NoclipFlyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+		local hrp = LocalPlayer.Character.HumanoidRootPart
+		local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
+
+		-- Noclip for all parts
+		for _,part in pairs(LocalPlayer.Character:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.CanCollide = false
+			end
+		end
+
+		-- Fly velocity
+		if not hrp:FindFirstChild("FlyVelocity") then
+			local bv = Instance.new("BodyVelocity")
+			bv.Name = "FlyVelocity"
+			bv.MaxForce = Vector3.new(1e5,1e5,1e5)
+			bv.Velocity = Vector3.new()
+			bv.Parent = hrp
+		end
+
+		local bv = hrp:FindFirstChild("FlyVelocity")
+		local direction = Vector3.new()
+		if UserInputService:IsKeyDown(Enum.KeyCode.W) then direction = direction + workspace.CurrentCamera.CFrame.LookVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.S) then direction = direction - workspace.CurrentCamera.CFrame.LookVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.A) then direction = direction - workspace.CurrentCamera.CFrame.RightVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.D) then direction = direction + workspace.CurrentCamera.CFrame.RightVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.Space) then direction = direction + Vector3.new(0,1,0) end
+		if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then direction = direction - Vector3.new(0,1,0) end
+		bv.Velocity = direction.Unit * _G.FlySpeed
+	else
+		if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+			local bv = LocalPlayer.Character.HumanoidRootPart:FindFirstChild("FlyVelocity")
+			if bv then bv:Destroy() end
+		end
+	end
+end)
