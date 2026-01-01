@@ -16,8 +16,8 @@ _G.FlySpeed = 50
 -- Sky Troll
 _G.SkyPower = 280
 _G.SkyDuration = 4
-_G.SkyImageId = "rbxassetid://72502710493513" -- 
-_G.SkySoundId = "rbxassetid://131178265362779" -- 
+_G.SkyImageId = "rbxassetid://72502710493513"
+_G.SkySoundId = "rbxassetid://131178265362779"
 
 --------------------------------------------------
 --// SAFE GUI
@@ -151,10 +151,8 @@ end
 --------------------------------------------------
 --// MOVEMENT PAGE
 --------------------------------------------------
--- Noclip + Fly
 CircleToggle(MovementPage,"Noclip + Fly","NoclipFlyEnabled")
 
--- Fly Speed Slider
 local function FlySpeedSlider(parent)
 	local holder = Instance.new("Frame", parent)
 	holder.Size = UDim2.new(1,0,0,40)
@@ -204,10 +202,9 @@ local function FlySpeedSlider(parent)
 	end)
 	holder.Parent = parent
 end
-
 FlySpeedSlider(MovementPage)
 
--- Player List
+-- Player list (unchanged)
 local PlayerListContainer = Instance.new("ScrollingFrame", MovementPage)
 PlayerListContainer.Size = UDim2.new(1,0,0,200)
 PlayerListContainer.Position = UDim2.new(0,0,0,140)
@@ -221,7 +218,6 @@ local PlayerLayout = Instance.new("UIListLayout", PlayerListContainer)
 PlayerLayout.Padding = UDim.new(0,4)
 PlayerLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Player Buttons
 local function CreatePlayerButton(player)
 	local holder = Instance.new("Frame")
 	holder.Size = UDim2.new(1,0,0,28)
@@ -271,10 +267,7 @@ local function CreatePlayerButton(player)
 	PlayerListContainer.CanvasSize = UDim2.new(0,0,0,PlayerLayout.AbsoluteContentSize.Y)
 end
 
-for _,p in pairs(Players:GetPlayers()) do
-	CreatePlayerButton(p)
-end
-
+for _,p in pairs(Players:GetPlayers()) do CreatePlayerButton(p) end
 Players.PlayerAdded:Connect(CreatePlayerButton)
 Players.PlayerRemoving:Connect(function(p)
 	for _,frame in pairs(PlayerListContainer:GetChildren()) do
@@ -314,48 +307,38 @@ local function GlobalSkyTroll(player, permanent)
 	local hrp = char:FindFirstChild("HumanoidRootPart")
 	if not hrp then return end
 
-	-- Launch player up
 	local bv = Instance.new("BodyVelocity")
 	bv.Name = "SkyLaunchVelocity"
 	bv.MaxForce = Vector3.new(0,1e5,0)
 	bv.Velocity = Vector3.new(0,_G.SkyPower,0)
 	bv.Parent = hrp
 
-	-- Global Billboard / Image
 	local skyPart = Instance.new("Part")
-	skyPart.Size = Vector3.new(20,20,1) -- Bigger size
+	skyPart.Size = Vector3.new(20,20,1)
 	skyPart.Anchored = true
 	skyPart.CanCollide = false
-	skyPart.Position = hrp.Position + Vector3.new(0,15,0) -- Higher
+	skyPart.Position = hrp.Position + Vector3.new(0,15,0)
 	skyPart.Parent = workspace
 
 	local billboard = Instance.new("BillboardGui", skyPart)
 	billboard.Size = UDim2.new(1,0,1,0)
+	billboard.Adornee = skyPart
 	billboard.AlwaysOnTop = true
+
 	local img = Instance.new("ImageLabel", billboard)
 	img.Size = UDim2.new(1,0,1,0)
 	img.BackgroundTransparency = 1
 	img.Image = _G.SkyImageId
 
-	-- Global Sound
-	local soundPart = Instance.new("Part")
-	soundPart.Size = Vector3.new(1,1,1)
-	soundPart.Anchored = true
-	soundPart.CanCollide = false
-	soundPart.Position = hrp.Position
-	soundPart.Parent = workspace
-
-	local sound = Instance.new("Sound", soundPart)
+	local sound = Instance.new("Sound", skyPart)
 	sound.SoundId = _G.SkySoundId
 	sound.Volume = 300
 	sound:Play()
 
-	-- Cleanup after duration (if not permanent)
 	if not permanent then
 		task.delay(_G.SkyDuration, function()
 			bv:Destroy()
 			skyPart:Destroy()
-			soundPart:Destroy()
 			SkyDebounce[player] = nil
 		end)
 	else
@@ -363,8 +346,7 @@ local function GlobalSkyTroll(player, permanent)
 	end
 end
 
-
--- Buttons for each player
+-- Button for each player
 local function CreateSkyButton(player)
 	local holder = Instance.new("Frame")
 	holder.Size = UDim2.new(1,0,0,28)
@@ -406,6 +388,15 @@ Players.PlayerRemoving:Connect(function(p)
 			SkyList.CanvasSize = UDim2.new(0,0,0,SkyLayout.AbsoluteContentSize.Y)
 		end
 	end
+end)
+
+-- GLOBAL SKY button
+Btn(SkyPage,"GLOBAL SKY",function()
+	local mouse = game.Players.LocalPlayer:GetMouse()
+	local pos = mouse.Hit.Position + Vector3.new(0,50,0)
+	local fakePlayer = {}
+	fakePlayer.Character = {HumanoidRootPart = {Position = pos}}
+	GlobalSkyTroll({Character = {HumanoidRootPart = {Position = pos}}}, true)
 end)
 
 --------------------------------------------------
