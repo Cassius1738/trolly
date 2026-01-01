@@ -204,7 +204,7 @@ local function FlySpeedSlider(parent)
 end
 FlySpeedSlider(MovementPage)
 
--- Player list (unchanged)
+-- Player list
 local PlayerListContainer = Instance.new("ScrollingFrame", MovementPage)
 PlayerListContainer.Size = UDim2.new(1,0,0,200)
 PlayerListContainer.Position = UDim2.new(0,0,0,140)
@@ -295,7 +295,7 @@ SkyLayout.Padding = UDim.new(0,4)
 SkyLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
 --------------------------------------------------
---// SKY TROLL FUNCTION (GLOBAL) IMPROVED
+--// SKY TROLL FUNCTION (SUPER BIG GLOBAL)
 --------------------------------------------------
 local SkyDebounce = {}
 local function GlobalSkyTroll(player, permanent)
@@ -307,29 +307,34 @@ local function GlobalSkyTroll(player, permanent)
 	local hrp = char:FindFirstChild("HumanoidRootPart")
 	if not hrp then return end
 
+	-- Launch player up
 	local bv = Instance.new("BodyVelocity")
 	bv.Name = "SkyLaunchVelocity"
 	bv.MaxForce = Vector3.new(0,1e5,0)
 	bv.Velocity = Vector3.new(0,_G.SkyPower,0)
 	bv.Parent = hrp
 
+	-- Super Ultra Duper Big Billboard visible to all
 	local skyPart = Instance.new("Part")
-	skyPart.Size = Vector3.new(20,20,1)
+	skyPart.Size = Vector3.new(500,500,500) -- MASSIVE
 	skyPart.Anchored = true
 	skyPart.CanCollide = false
-	skyPart.Position = hrp.Position + Vector3.new(0,15,0)
+	skyPart.Position = hrp.Position + Vector3.new(0,250,0) -- high above player
 	skyPart.Parent = workspace
 
 	local billboard = Instance.new("BillboardGui", skyPart)
 	billboard.Size = UDim2.new(1,0,1,0)
 	billboard.Adornee = skyPart
 	billboard.AlwaysOnTop = true
+	billboard.LightInfluence = 0
 
 	local img = Instance.new("ImageLabel", billboard)
 	img.Size = UDim2.new(1,0,1,0)
 	img.BackgroundTransparency = 1
 	img.Image = _G.SkyImageId
+	img.ScaleType = Enum.ScaleType.Fit
 
+	-- Global Sound
 	local sound = Instance.new("Sound", skyPart)
 	sound.SoundId = _G.SkySoundId
 	sound.Volume = 300
@@ -390,13 +395,11 @@ Players.PlayerRemoving:Connect(function(p)
 	end
 end)
 
--- GLOBAL SKY button
+-- GLOBAL SKY button (applies to all players)
 Btn(SkyPage,"GLOBAL SKY",function()
-	local mouse = game.Players.LocalPlayer:GetMouse()
-	local pos = mouse.Hit.Position + Vector3.new(0,50,0)
-	local fakePlayer = {}
-	fakePlayer.Character = {HumanoidRootPart = {Position = pos}}
-	GlobalSkyTroll({Character = {HumanoidRootPart = {Position = pos}}}, true)
+	for _,player in pairs(Players:GetPlayers()) do
+		GlobalSkyTroll(player, true) -- super big, permanent, same for everyone
+	end
 end)
 
 --------------------------------------------------
