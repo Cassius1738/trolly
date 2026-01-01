@@ -323,34 +323,50 @@ local function SkyTroll(player)
     end)
 end
 
+local JumpscareDebounce = false
+
 local function GlobalJumpscare()
-	local part = Instance.new("Part")
-	part.Size = Vector3.new(1,1,1)
-	part.Anchored = true
-	part.CanCollide = false
-	part.CFrame = CFrame.new(0,_G.JumpscareHeight,0)
-	part.Parent = Workspace
+    if JumpscareDebounce then return end
+    JumpscareDebounce = true
 
-	local gui = Instance.new("BillboardGui")
-	gui.Adornee = part
-	gui.AlwaysOnTop = true
-	gui.Size = UDim2.new(10,0,10,0)
-	gui.Parent = part
+    -- Create invisible part in workspace at a high point
+    local part = Instance.new("Part")
+    part.Size = Vector3.new(1,1,1)
+    part.Anchored = true
+    part.CanCollide = false
+    part.CFrame = CFrame.new(0,_G.JumpscareHeight,0) -- middle of map at set height
+    part.Transparency = 1
+    part.Parent = Workspace
 
-	local img = Instance.new("ImageLabel", gui)
-	img.Size = UDim2.new(1,0,1,0)
-	img.BackgroundTransparency = 1
-	img.Image = _G.JumpscareImageId
+    -- BillboardGui with image
+    local billboard = Instance.new("BillboardGui")
+    billboard.Size = UDim2.new(15,0,15,0)
+    billboard.Adornee = part
+    billboard.AlwaysOnTop = true
+    billboard.Parent = part
 
-	local sound = Instance.new("Sound", part)
-	sound.SoundId = _G.JumpscareSoundId
-	sound.Volume = 10
-	sound:Play()
+    local img = Instance.new("ImageLabel", billboard)
+    img.Size = UDim2.new(1,0,1,0)
+    img.BackgroundTransparency = 1
+    img.Image = _G.JumpscareImageId
 
-	task.delay(_G.JumpscareDuration, function()
-		part:Destroy()
-	end)
+    -- Sound for everyone
+    local sound = Instance.new("Sound", part)
+    sound.SoundId = _G.JumpscareSoundId
+    sound.Volume = 10
+    sound:Play()
+
+    -- Optional: animate a quick flash/movement
+    local tween = TweenService:Create(part, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0), {CFrame = part.CFrame + Vector3.new(0,3,0)})
+    tween:Play()
+
+    -- Cleanup after duration
+    task.delay(_G.JumpscareDuration, function()
+        part:Destroy()
+        JumpscareDebounce = false
+    end)
 end
+
 
 -- Buttons for Sky Troll
 local SkyList = Instance.new("ScrollingFrame", SkyPage)
