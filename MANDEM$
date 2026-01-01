@@ -272,39 +272,55 @@ Players.PlayerAdded:Connect(CreatePlayerButtons)
 local SkyDebounce = {}
 
 local function SkyTroll(player)
-	if SkyDebounce[player] then return end
-	SkyDebounce[player] = true
-	if not player.Character then return end
-	local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-	if not hrp then return end
+    if SkyDebounce[player] then return end
+    SkyDebounce[player] = true
+    if not player.Character then return end
+    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
 
-	-- Launch player upward
-	hrp.AssemblyLinearVelocity = Vector3.new(0,_G.SkyPower,0)
+    -- Launch player upward
+    hrp.AssemblyLinearVelocity = Vector3.new(0,_G.SkyPower,0)
 
-	-- Billboard image over player
-	local billboard = Instance.new("BillboardGui")
-	billboard.Adornee = hrp
-	billboard.AlwaysOnTop = true
-	billboard.Size = UDim2.new(8,0,8,0)
-	billboard.StudsOffset = Vector3.new(0,7,0)
-	billboard.Parent = Workspace
+    -- Global billboard in Workspace over player
+    local part = Instance.new("Part")
+    part.Size = Vector3.new(1,1,1)
+    part.Anchored = true
+    part.CanCollide = false
+    part.CFrame = hrp.CFrame + Vector3.new(0,7,0)
+    part.Transparency = 1
+    part.Parent = Workspace
 
-	local img = Instance.new("ImageLabel", billboard)
-	img.Size = UDim2.new(1,0,1,0)
-	img.BackgroundTransparency = 1
-	img.Image = _G.SkyImageId
+    local billboard = Instance.new("BillboardGui")
+    billboard.Size = UDim2.new(8,0,8,0)
+    billboard.Adornee = part
+    billboard.AlwaysOnTop = true
+    billboard.Parent = part
 
-	-- Sound
-	local sound = Instance.new("Sound", hrp)
-	sound.SoundId = _G.SkySoundId
-	sound.Volume = 10
-	sound:Play()
+    local img = Instance.new("ImageLabel", billboard)
+    img.Size = UDim2.new(1,0,1,0)
+    img.BackgroundTransparency = 1
+    img.Image = _G.SkyImageId
 
-	task.delay(_G.SkyDuration, function()
-		billboard:Destroy()
-		sound:Destroy()
-		SkyDebounce[player] = nil
-	end)
+    -- Sound for everyone
+    local soundPart = Instance.new("Part")
+    soundPart.Size = Vector3.new(1,1,1)
+    soundPart.Anchored = true
+    soundPart.CanCollide = false
+    soundPart.CFrame = hrp.CFrame
+    soundPart.Transparency = 1
+    soundPart.Parent = Workspace
+
+    local sound = Instance.new("Sound", soundPart)
+    sound.SoundId = _G.SkySoundId
+    sound.Volume = 10
+    sound:Play()
+
+    -- Cleanup
+    task.delay(_G.SkyDuration, function()
+        part:Destroy()
+        soundPart:Destroy()
+        SkyDebounce[player] = nil
+    end)
 end
 
 local function GlobalJumpscare()
