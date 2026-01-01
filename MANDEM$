@@ -21,7 +21,7 @@ _G.SkyImageId = "rbxassetid://72502710493513"
 _G.SkySoundId = "rbxassetid://131178265362779"
 
 --------------------------------------------------
---// REMOTEEVENT SETUP (SERVER + CLIENT)
+--// REMOTE EVENT SETUP
 --------------------------------------------------
 local GlobalSkyEvent = ReplicatedStorage:FindFirstChild("GlobalSkyEvent")
 if not GlobalSkyEvent then
@@ -29,39 +29,6 @@ if not GlobalSkyEvent then
 	GlobalSkyEvent.Name = "GlobalSkyEvent"
 	GlobalSkyEvent.Parent = ReplicatedStorage
 end
-
--- Client listener: spawn SKY parts when server fires
-GlobalSkyEvent.OnClientEvent:Connect(function(pos)
-	-- SKY PART
-	local skyPart = Instance.new("Part")
-	skyPart.Size = Vector3.new(40,40,1) -- SUPER ULTRA BIG
-	skyPart.Anchored = true
-	skyPart.CanCollide = false
-	skyPart.Position = pos
-	skyPart.Parent = workspace
-
-	-- BILLBOARD
-	local billboard = Instance.new("BillboardGui", skyPart)
-	billboard.Size = UDim2.new(1,0,1,0)
-	billboard.Adornee = skyPart
-	billboard.AlwaysOnTop = true
-
-	local img = Instance.new("ImageLabel", billboard)
-	img.Size = UDim2.new(1,0,1,0)
-	img.BackgroundTransparency = 1
-	img.Image = _G.SkyImageId
-
-	-- SOUND
-	local sound = Instance.new("Sound", skyPart)
-	sound.SoundId = _G.SkySoundId
-	sound.Volume = 10
-	sound:Play()
-
-	-- CLEANUP
-	task.delay(_G.SkyDuration, function()
-		skyPart:Destroy()
-	end)
-end)
 
 --------------------------------------------------
 --// SAFE GUI
@@ -119,8 +86,9 @@ local function Page()
 	f.Size = UDim2.new(1,-30,1,-110)
 	f.BackgroundTransparency = 1
 	f.Visible = false
-	Instance.new("UIListLayout", f).Padding = UDim.new(0,8)
-	Instance.new("UIListLayout", f).SortOrder = Enum.SortOrder.LayoutOrder
+	local layout = Instance.new("UIListLayout", f)
+	layout.Padding = UDim.new(0,8)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	f.Parent = Pages
 	return f
 end
@@ -197,6 +165,7 @@ end
 --------------------------------------------------
 CircleToggle(MovementPage,"Noclip + Fly","NoclipFlyEnabled")
 
+-- Fly Speed Slider
 local function FlySpeedSlider(parent)
 	local holder = Instance.new("Frame", parent)
 	holder.Size = UDim2.new(1,0,0,40)
@@ -279,6 +248,7 @@ local function CreatePlayerButton(player)
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 	nameLabel.Position = UDim2.new(0,5,0,0)
 
+	-- TP button
 	local tpBtn = Instance.new("TextButton", holder)
 	tpBtn.Size = UDim2.new(0.22,0,1,0)
 	tpBtn.Position = UDim2.new(0.52,0,0,0)
@@ -294,6 +264,7 @@ local function CreatePlayerButton(player)
 		end
 	end)
 
+	-- Bring button
 	local bringBtn = Instance.new("TextButton", holder)
 	bringBtn.Size = UDim2.new(0.22,0,1,0)
 	bringBtn.Position = UDim2.new(0.76,0,0,0)
@@ -306,6 +277,23 @@ local function CreatePlayerButton(player)
 	bringBtn.MouseButton1Click:Connect(function()
 		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
 			player.Character.HumanoidRootPart.CFrame = CFrame.new(0,5,0)
+		end
+	end)
+
+	-- Sky button
+	local skyBtn = Instance.new("TextButton", holder)
+	skyBtn.Size = UDim2.new(0.22,0,1,0)
+	skyBtn.Position = UDim2.new(1.0,-90,0,0)
+	skyBtn.BackgroundColor3 = Color3.fromRGB(170,50,255)
+	skyBtn.Text = "SKY"
+	skyBtn.TextColor3 = Color3.new(1,1,1)
+	skyBtn.Font = Enum.Font.GothamBold
+	skyBtn.TextSize = 12
+	Instance.new("UICorner", skyBtn).CornerRadius = UDim.new(0,6)
+	skyBtn.MouseButton1Click:Connect(function()
+		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			local pos = player.Character.HumanoidRootPart.Position + Vector3.new(0,50,0)
+			GlobalSkyEvent:FireServer(pos)
 		end
 	end)
 
@@ -325,7 +313,7 @@ Players.PlayerRemoving:Connect(function(p)
 end)
 
 --------------------------------------------------
---// SKY TROLL PAGE
+--// SKY PAGE
 --------------------------------------------------
 local SkyList = Instance.new("ScrollingFrame", SkyPage)
 SkyList.Size = UDim2.new(1,0,1,0)
@@ -340,55 +328,43 @@ local SkyLayout = Instance.new("UIListLayout", SkyList)
 SkyLayout.Padding = UDim.new(0,4)
 SkyLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
-local function CreateSkyButton(player)
-	local holder = Instance.new("Frame")
-	holder.Size = UDim2.new(1,0,0,28)
-	holder.BackgroundTransparency = 1
+-- SKY spawn function
+local function SpawnSky(position)
+	local skyPart = Instance.new("Part")
+	skyPart.Size = Vector3.new(80,80,1) -- super big
+	skyPart.Anchored = true
+	skyPart.CanCollide = false
+	skyPart.Position = position
+	skyPart.Parent = workspace
 
-	local nameLabel = Instance.new("TextLabel", holder)
-	nameLabel.Size = UDim2.new(0.6,0,1,0)
-	nameLabel.Position = UDim2.new(0,5,0,0)
-	nameLabel.BackgroundTransparency = 1
-	nameLabel.Text = player.Name
-	nameLabel.TextColor3 = Color3.new(1,1,1)
-	nameLabel.Font = Enum.Font.Gotham
-	nameLabel.TextSize = 13
-	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	local billboard = Instance.new("BillboardGui", skyPart)
+	billboard.Size = UDim2.new(1,0,1,0)
+	billboard.Adornee = skyPart
+	billboard.AlwaysOnTop = true
 
-	local skyBtn = Instance.new("TextButton", holder)
-	skyBtn.Size = UDim2.new(0.35,0,1,0)
-	skyBtn.Position = UDim2.new(0.62,0,0,0)
-	skyBtn.BackgroundColor3 = Color3.fromRGB(170,50,255)
-	skyBtn.Text = "SKY"
-	skyBtn.TextColor3 = Color3.new(1,1,1)
-	skyBtn.Font = Enum.Font.GothamBold
-	skyBtn.TextSize = 12
-	Instance.new("UICorner", skyBtn).CornerRadius = UDim.new(0,6)
-	skyBtn.MouseButton1Click:Connect(function()
-		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-			GlobalSkyEvent:FireServer(player.Character.HumanoidRootPart.Position)
-		end
+	local img = Instance.new("ImageLabel", billboard)
+	img.Size = UDim2.new(1,0,1,0)
+	img.BackgroundTransparency = 1
+	img.Image = _G.SkyImageId
+
+	local sound = Instance.new("Sound", skyPart)
+	sound.SoundId = _G.SkySoundId
+	sound.Volume = 10
+	sound:Play()
+
+	task.delay(_G.SkyDuration, function()
+		skyPart:Destroy()
 	end)
-
-	holder.Parent = SkyList
-	SkyList.CanvasSize = UDim2.new(0,0,0,SkyLayout.AbsoluteContentSize.Y)
 end
 
-for _,p in pairs(Players:GetPlayers()) do CreateSkyButton(p) end
-Players.PlayerAdded:Connect(CreateSkyButton)
-Players.PlayerRemoving:Connect(function(p)
-	for _,frame in pairs(SkyList:GetChildren()) do
-		if frame:IsA("Frame") and frame:FindFirstChildOfClass("TextLabel") and frame:FindFirstChildOfClass("TextLabel").Text == p.Name then
-			frame:Destroy()
-			SkyList.CanvasSize = UDim2.new(0,0,0,SkyLayout.AbsoluteContentSize.Y)
-		end
-	end
-end)
+-- Listen from server
+GlobalSkyEvent.OnClientEvent:Connect(SpawnSky)
 
 -- GLOBAL SKY button
 Btn(SkyPage,"GLOBAL SKY",function()
 	local mouse = LocalPlayer:GetMouse()
-	GlobalSkyEvent:FireServer(mouse.Hit.Position + Vector3.new(0,50,0))
+	local pos = mouse.Hit.Position + Vector3.new(0,50,0)
+	GlobalSkyEvent:FireServer(pos)
 end)
 
 --------------------------------------------------
