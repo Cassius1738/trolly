@@ -4,6 +4,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
 --------------------------------------------------
@@ -18,6 +19,49 @@ _G.SkyPower = 280
 _G.SkyDuration = 4
 _G.SkyImageId = "rbxassetid://72502710493513"
 _G.SkySoundId = "rbxassetid://131178265362779"
+
+--------------------------------------------------
+--// REMOTEEVENT SETUP (SERVER + CLIENT)
+--------------------------------------------------
+local GlobalSkyEvent = ReplicatedStorage:FindFirstChild("GlobalSkyEvent")
+if not GlobalSkyEvent then
+	GlobalSkyEvent = Instance.new("RemoteEvent")
+	GlobalSkyEvent.Name = "GlobalSkyEvent"
+	GlobalSkyEvent.Parent = ReplicatedStorage
+end
+
+-- Client listener: spawn SKY parts when server fires
+GlobalSkyEvent.OnClientEvent:Connect(function(pos)
+	-- SKY PART
+	local skyPart = Instance.new("Part")
+	skyPart.Size = Vector3.new(40,40,1) -- SUPER ULTRA BIG
+	skyPart.Anchored = true
+	skyPart.CanCollide = false
+	skyPart.Position = pos
+	skyPart.Parent = workspace
+
+	-- BILLBOARD
+	local billboard = Instance.new("BillboardGui", skyPart)
+	billboard.Size = UDim2.new(1,0,1,0)
+	billboard.Adornee = skyPart
+	billboard.AlwaysOnTop = true
+
+	local img = Instance.new("ImageLabel", billboard)
+	img.Size = UDim2.new(1,0,1,0)
+	img.BackgroundTransparency = 1
+	img.Image = _G.SkyImageId
+
+	-- SOUND
+	local sound = Instance.new("Sound", skyPart)
+	sound.SoundId = _G.SkySoundId
+	sound.Volume = 10
+	sound:Play()
+
+	-- CLEANUP
+	task.delay(_G.SkyDuration, function()
+		skyPart:Destroy()
+	end)
+end)
 
 --------------------------------------------------
 --// SAFE GUI
@@ -204,7 +248,9 @@ local function FlySpeedSlider(parent)
 end
 FlySpeedSlider(MovementPage)
 
--- Player list
+--------------------------------------------------
+--// PLAYER LIST
+--------------------------------------------------
 local PlayerListContainer = Instance.new("ScrollingFrame", MovementPage)
 PlayerListContainer.Size = UDim2.new(1,0,0,200)
 PlayerListContainer.Position = UDim2.new(0,0,0,140)
@@ -294,64 +340,6 @@ local SkyLayout = Instance.new("UIListLayout", SkyList)
 SkyLayout.Padding = UDim.new(0,4)
 SkyLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
---------------------------------------------------
---// SKY TROLL FUNCTION (SUPER BIG GLOBAL)
---------------------------------------------------
-local SkyDebounce = {}
-local function GlobalSkyTroll(player, permanent)
-	if SkyDebounce[player] then return end
-	SkyDebounce[player] = true
-
-	if not player.Character then return end
-	local char = player.Character
-	local hrp = char:FindFirstChild("HumanoidRootPart")
-	if not hrp then return end
-
-	-- Launch player up
-	local bv = Instance.new("BodyVelocity")
-	bv.Name = "SkyLaunchVelocity"
-	bv.MaxForce = Vector3.new(0,1e5,0)
-	bv.Velocity = Vector3.new(0,_G.SkyPower,0)
-	bv.Parent = hrp
-
-	-- Super Ultra Duper Big Billboard visible to all
-	local skyPart = Instance.new("Part")
-	skyPart.Size = Vector3.new(500,500,500) -- MASSIVE
-	skyPart.Anchored = true
-	skyPart.CanCollide = false
-	skyPart.Position = hrp.Position + Vector3.new(0,250,0) -- high above player
-	skyPart.Parent = workspace
-
-	local billboard = Instance.new("BillboardGui", skyPart)
-	billboard.Size = UDim2.new(1,0,1,0)
-	billboard.Adornee = skyPart
-	billboard.AlwaysOnTop = true
-	billboard.LightInfluence = 0
-
-	local img = Instance.new("ImageLabel", billboard)
-	img.Size = UDim2.new(1,0,1,0)
-	img.BackgroundTransparency = 1
-	img.Image = _G.SkyImageId
-	img.ScaleType = Enum.ScaleType.Fit
-
-	-- Global Sound
-	local sound = Instance.new("Sound", skyPart)
-	sound.SoundId = _G.SkySoundId
-	sound.Volume = 300
-	sound:Play()
-
-	if not permanent then
-		task.delay(_G.SkyDuration, function()
-			bv:Destroy()
-			skyPart:Destroy()
-			SkyDebounce[player] = nil
-		end)
-	else
-		SkyDebounce[player] = nil
-	end
-end
-
--- Button for each player
 local function CreateSkyButton(player)
 	local holder = Instance.new("Frame")
 	holder.Size = UDim2.new(1,0,0,28)
@@ -377,7 +365,9 @@ local function CreateSkyButton(player)
 	skyBtn.TextSize = 12
 	Instance.new("UICorner", skyBtn).CornerRadius = UDim.new(0,6)
 	skyBtn.MouseButton1Click:Connect(function()
-		GlobalSkyTroll(player)
+		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			GlobalSkyEvent:FireServer(player.Character.HumanoidRootPart.Position)
+		end
 	end)
 
 	holder.Parent = SkyList
@@ -395,11 +385,10 @@ Players.PlayerRemoving:Connect(function(p)
 	end
 end)
 
--- GLOBAL SKY button (applies to all players)
+-- GLOBAL SKY button
 Btn(SkyPage,"GLOBAL SKY",function()
-	for _,player in pairs(Players:GetPlayers()) do
-		GlobalSkyTroll(player, true) -- super big, permanent, same for everyone
-	end
+	local mouse = LocalPlayer:GetMouse()
+	GlobalSkyEvent:FireServer(mouse.Hit.Position + Vector3.new(0,50,0))
 end)
 
 --------------------------------------------------
